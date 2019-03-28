@@ -22,4 +22,20 @@ void err_dump(const char *fmt, ...);
 void err_msg(const char *fmt, ...);
 void err_quit(const char *fmt, ...);
 
+int fd_pipe(int fd[2]);
+
+ssize_t readn(int fd, void *buf, size_t nbytes);
+ssize_t writen(int fd, void *buf, size_t nbytes);
+
+void do_driver(char *driver);
+
+pid_t
+pty_fork(int *ptrfdm, char *slave_name, size_t slave_namesz,
+         const struct termios *slave_termios,
+         const struct winsize *slave_winsize);
+
+typedef void Sigfunc(int);
+
+Sigfunc * signal_intr(int signo, Sigfunc *func);
+
 #endif //KRKR_KRKR_H
