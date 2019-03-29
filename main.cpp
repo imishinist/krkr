@@ -9,6 +9,7 @@
 static void sig_term(int);
 static volatile sig_atomic_t sigcaught;
 void loop(int ptym);
+static void set_noecho(int fd);
 
 int main(int argc, char *argv[]) {
     pid_t pid;
@@ -36,7 +37,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (optind >= argc)
+    if (optind > argc)
         err_quit("usage: krkr [ -d driver -p program ]");
 
     if (driver == nullptr || prog == nullptr)
@@ -48,13 +49,23 @@ int main(int argc, char *argv[]) {
     if (pid < 0) {
         err_sys("fork error");
     } else if (pid == 0) {
+        set_noecho(STDIN_FILENO);
         if (execvp(prog, nullptr) < 0)
             err_sys("can't execute");
     }
+    pid_t child_pid;
+    child_pid = do_driver(fdm, driver);
+    int status;
 
-    do_driver(driver);
+    if (waitpid(child_pid, &status, 0) < 0)
+        err_sys("waitpid error");
 
-    loop(fdm);
+    if (WIFEXITED(status)) {
+        printf("child process exited with status %d\n", WEXITSTATUS(status));
+    }
+    if (WIFSIGNALED(status)) {
+        printf("child process exited with signal %d\n", WTERMSIG(status));
+    }
 
     return 0;
 }
@@ -117,4 +128,20 @@ signal_intr(int signo, Sigfunc *func)
     if (sigaction(signo, &act, &oact) < 0)
         return (SIG_ERR);
     return oact.sa_handler;
+}
+
+static void
+set_noecho(int fd)
+{
+    struct termios stermios;
+    if (tcgetattr(fd, &stermios) < 0)
+        err_sys("tcgetattr error");
+
+    stermios.c_lflag &= ~(ECHO | ECHOE | ECHOK | ECHONL);
+
+    stermios.c_oflag &= ~(ONLCR);
+
+    if (tcsetattr(fd, TCSANOW, &stermios) < 0)
+        err_sys("tcsetattr error");
+
 }

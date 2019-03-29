@@ -27,7 +27,7 @@ int fd_pipe(int fd[2]);
 ssize_t readn(int fd, void *buf, size_t nbytes);
 ssize_t writen(int fd, void *buf, size_t nbytes);
 
-void do_driver(char *driver);
+int do_driver(int ptym, char *driver);
 
 pid_t
 pty_fork(int *ptrfdm, char *slave_name, size_t slave_namesz,
