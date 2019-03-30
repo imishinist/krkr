@@ -4,7 +4,14 @@ Circulating two processes with stdin/stdout.
 
 ```
 make -C samples
-cd build && cmake .. && cmake --build .
+go build
 
 ./krkr -d ../samples/driver -p ../samples/prog
 ```
+
+
+## Requirements
+
+- Go 1.12
+- make
+- gcc
