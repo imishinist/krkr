@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/pkg/term/termios"
+	"golang.org/x/sys/unix"
 )
 
 func setupDriver(ptym *os.File, driver string) error {
@@ -34,7 +35,7 @@ func setupProg(pts *os.File, prog string) error {
 	cmd.Stdin = pts
 	cmd.Stdout = pts
 
-	var attr syscall.Termios
+	var attr unix.Termios
 	if err := termios.Tcgetattr(pts.Fd(), &attr); err != nil {
 		return errors.Wrap(err, "prog tcgetattr failed")
 	}
