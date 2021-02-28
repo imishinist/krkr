@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
 	"os/exec"
 	"syscall"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/pkg/term/termios"
@@ -13,8 +15,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func setupDriver(ptym *os.File, driver string) error {
-	cmd := exec.Command(driver)
+func setupDriver(ctx context.Context, ptym *os.File, driver string) error {
+	cmd := exec.CommandContext(ctx, driver)
 
 	cmd.Stdin = ptym
 	cmd.Stdout = ptym
@@ -30,8 +32,8 @@ func setupDriver(ptym *os.File, driver string) error {
 	return nil
 }
 
-func setupProg(pts *os.File, prog string) error {
-	cmd := exec.Command(prog)
+func setupProg(ctx context.Context, pts *os.File, prog string) error {
+	cmd := exec.CommandContext(ctx, prog)
 
 	cmd.Stdin = pts
 	cmd.Stdout = pts
@@ -61,6 +63,7 @@ func setupProg(pts *os.File, prog string) error {
 func main() {
 	driver := flag.String("d", "", "driver program")
 	prog := flag.String("p", "", "answer program")
+	timeout := flag.Duration("dur", time.Second*5, "")
 	flag.Parse()
 
 	if *driver == "" || *prog == "" {
@@ -72,12 +75,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	eg := errgroup.Group{}
+	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+	defer cancel()
+
+	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		return setupProg(pts, *prog)
+		return setupProg(ctx, pts, *prog)
 	})
 	eg.Go(func() error {
-		return setupDriver(ptym, *driver)
+		return setupDriver(ctx, ptym, *driver)
 	})
 
 	if err := eg.Wait(); err != nil {

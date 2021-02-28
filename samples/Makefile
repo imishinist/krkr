@@ -14,5 +14,9 @@ prog: prog.c
 wrong: wrong.c
 	gcc wrong.c -o wrong
 
+.PHONY: loop
+loop: loop.c
+	gcc loop.c -o loop
+
 clean:
 	rm -f driver prog wrong
