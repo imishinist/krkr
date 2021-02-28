@@ -1,22 +1,10 @@
+CFLAGS=-std=c11 -fno-common -Wall -Wno-switch
+
+SRCS=$(wildcard *.c)
+EXES=$(SRCS:.c=)
 
 .PHONY: all
-all: driver prog wrong
-
-.PHONY: driveer
-driver: driver.c
-	gcc driver.c -o driver
-
-.PHONY: prog
-prog: prog.c
-	gcc prog.c -o prog
-
-.PHONY: wrong
-wrong: wrong.c
-	gcc wrong.c -o wrong
-
-.PHONY: loop
-loop: loop.c
-	gcc loop.c -o loop
+all: $(EXES)
 
 clean:
-	rm -f driver prog wrong
+	rm -f $(EXES)
