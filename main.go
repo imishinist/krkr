@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/pkg/term/termios"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/sys/unix"
 )
 
@@ -71,22 +72,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	errCh := make(chan error)
+	eg := errgroup.Group{}
+	eg.Go(func() error {
+		return setupProg(pts, *prog)
+	})
+	eg.Go(func() error {
+		return setupDriver(ptym, *driver)
+	})
 
-	go func() {
-		errCh <- setupProg(pts, *prog)
-	}()
-	go func() {
-		errCh <- setupDriver(ptym, *driver)
-	}()
-
-	for i := 0; i < 2; i++ {
-		select {
-		case err := <-errCh:
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
+	if err := eg.Wait(); err != nil {
+		log.Fatal(err)
 	}
-
 }
