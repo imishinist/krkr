@@ -15,38 +15,30 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func setupDriver(ctx context.Context, ptym *os.File, driver string) error {
-	cmd := exec.CommandContext(ctx, driver)
-
-	cmd.Stdin = ptym
-	cmd.Stdout = ptym
-
-	if err := cmd.Start(); err != nil {
-		return errors.Wrap(err, "driver start failed")
-	}
-
-	if err := cmd.Wait(); err != nil {
-		return errors.Wrap(err, "driver wait failed")
-	}
-
-	return nil
-}
-
-func setupProg(ctx context.Context, pts *os.File, prog string) error {
-	cmd := exec.CommandContext(ctx, prog)
-
-	cmd.Stdin = pts
-	cmd.Stdout = pts
-
+func setNoEcho(tty *os.File) error {
 	var attr unix.Termios
-	if err := termios.Tcgetattr(pts.Fd(), &attr); err != nil {
+	if err := termios.Tcgetattr(tty.Fd(), &attr); err != nil {
 		return errors.Wrap(err, "prog tcgetattr failed")
 	}
 	attr.Lflag &^= (syscall.ECHO)
 	attr.Oflag &^= (syscall.ONLCR)
 
-	if err := termios.Tcsetattr(pts.Fd(), termios.TCSANOW, &attr); err != nil {
+	if err := termios.Tcsetattr(tty.Fd(), termios.TCSANOW, &attr); err != nil {
 		return errors.Wrap(err, "prog tcsetattr failed")
+	}
+	return nil
+}
+
+func run(ctx context.Context, tty *os.File, prog string, asSlave bool) error {
+	cmd := exec.CommandContext(ctx, prog)
+
+	cmd.Stdin = tty
+	cmd.Stdout = tty
+
+	if asSlave {
+		if err := setNoEcho(tty); err != nil {
+			return errors.Wrap(err, "set noecho error")
+		}
 	}
 
 	if err := cmd.Start(); err != nil {
@@ -80,10 +72,10 @@ func main() {
 
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		return setupProg(ctx, pts, *prog)
+		return run(ctx, pts, *prog, false)
 	})
 	eg.Go(func() error {
-		return setupDriver(ctx, ptym, *driver)
+		return run(ctx, ptym, *driver, true)
 	})
 
 	if err := eg.Wait(); err != nil {
